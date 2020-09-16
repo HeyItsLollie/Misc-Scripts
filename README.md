@@ -1,5 +1,5 @@
 # Lollie's Basket of Scripts n' Bits 🦊
- Various scripts and notes I've made while digging around inside PS1 games, as I try to learn more and do fun things with them.
+ Various scripts and notes I've made while digging around inside PS1 games, as I try to do fun things with them.
 
 Detailed information can be found in each folder's individual README.MD!
 
