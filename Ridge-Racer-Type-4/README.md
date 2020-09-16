@@ -1,0 +1,2 @@
+# R4: Ridge Racer Type-4 
+Back in October 2019, I investigated how custom decals are stored, and manually injected one into a PS1 save file. This folder is incomplete and I haven't fully documented the process, so for now: [**Twitter Thread!!**](https://twitter.com/Hey_Its_Lollie/status/1185988775966461953)
