@@ -79,7 +79,7 @@ String: The filename
  
 4: Start of entry data, will always be "BODY"
 4: Length of entry data in bytes
-Variable: The image data itself, length specified previous 4 bytes.
+Variable: The image data itself, length specified in previous 4 bytes.
  - Data is stored as one pixel per byte, as an indexed color (CMAP) ranged 00 to FF
 
 ---------------
