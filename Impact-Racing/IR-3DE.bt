@@ -1,0 +1,286 @@
+//------------------------------------------------
+//--- 010 Editor v2.0 Binary Template
+//
+//      File: IR-3DE.bt
+//    Author: Lollie
+//   Version: 0.3
+//   Purpose: Read 3DE files from the PS1 title "Impact Racing"
+//  Category: Image/Model
+// File Mask: *.3de
+//  ID Bytes: No idea what this means!!
+//   History:
+//   0.3	Multiple texture entries supported,
+//			and can now show colors of CMap
+//   0.2	Can read first texture entry in pack
+//   0.1	Initial test
+//
+// Suitable for Impact Racing files only
+//------------------------------------------------
+
+// Define structures used in 3DE files
+
+typedef struct {            // bmph - Every .3DE pack starts with this, even if it only contains one file
+    BigEndian();
+	SetBackColor( 0xFF00D2 );
+    BYTE    bpForm[4];      // Will always be "FORM"
+    INT32   bpPackSize;     // Size of package from this point onwards
+	BYTE    bpLB3D[4];      // Will always be "LB3D"
+} dot3DEPackHeader;
+
+typedef struct {            // bmfh - This is the start of an actual file
+	SetBackColor( cWhite );
+    BYTE    bfForm[4];      // Will always be "FORM"
+    INT32   bfFileSize;     // Size of current file from this point onwards
+	BYTE    bfType[4];      // This template can currently only read the type "TXTR"
+	BYTE    bfStrName[4];   // Will always be "NAME"
+	INT32   bfNameLength;   // Only use the final byte
+	string  bfName;         // Name of file
+    if (!ReadByte(FTell()))
+    {
+        FSkip(1);
+    }
+} dot3DEFileHeader;
+
+//------------------------------------------------
+//                   TEXTURES
+//------------------------------------------------
+
+typedef struct {             // bmth - Textures
+	SetBackColor( cRed );
+    BYTE    btTXHD[4];       // Texture Header, should always be "TXHD"
+	INT32   btHeadSize;      // Size of header in bytes. Textures headers are usually 18 bytes / 00 00 00 12
+    INT16   btWidth;         // Texture Width in pixels
+    INT16   btHeight;        // Texture Height in pixels
+    INT16   btCMapCount;     // Number of colors in palette
+	INT32   btReserved1;     // Unknown
+	INT32   btReserved2;     // Padding?
+	INT32   btReserved3;     // Padding?
+	SetBackColor( cGreen );
+    BYTE    btStrCMap[4];    // Color palette, will always be "CMAP" (Color Map)
+    INT32   btCMapLength;    // Number of bytes used, minimum 4, maximum 768. eg: 09 = Three palette entries
+} dot3DETextureHeader;
+
+typedef struct {             // rgbt - Palette entries are in reverse order
+    UBYTE   rgbRed;
+    UBYTE   rgbGreen;
+    UBYTE   rgbBlue;
+} RGBTRIPLE <read=ReadRGBTRIPLE>;
+
+typedef struct {             // bmbh
+    if (!ReadByte(FTell()))
+    {
+        FSkip(1);
+    }
+    BYTE    bbBODY[4];       // Start of image data, will always be "BODY"
+	INT32   bbImgDataSize;          // Size of image data from this point onwards
+} dot3DEBodyHeader;
+
+//---------------------------------------------
+// Custom read functions for color types - this allows the
+//  color to be displayed without having to open up the structure.
+
+string ReadRGBTRIPLE( RGBTRIPLE &a )
+{
+	string s;
+    SPrintf( s, "0x%02X%02X%02X", a.rgbRed, a.rgbGreen, a.rgbBlue );
+    return s;
+}
+
+//---------------------------------------------
+
+//------------------------------------------------
+//                      MESH
+//------------------------------------------------
+
+typedef struct {             // bmmh - Mesh
+	SetBackColor( cRed );
+    BYTE    bmMSHD[4];       // Mesh Header, should always be "MSHD"
+	INT32   bmHeadSize;      // Header size seems to be 16 bytes / 00 00 00 10
+    INT32   bmVertCount;     // Number of Vertexes
+	INT32   bmUnk1;          // Faces?
+	INT32   bmUnk2;          // Materials?
+	INT32   bmUnk3;          // Unknown
+} dot3DEMeshHeader;
+
+typedef struct {
+	SetBackColor(cWhite);
+	BYTE	bmOPOS[4];       // Origin Position, "OPOS"
+	INT32   bmOPOSSize;      // Size of OPOS, should always be 18 bytes / 00 00 00 12
+	BYTE    bmOPOSCoord[18]; // Origin position, type unknown
+} dot3DEMeshOPOS;
+
+typedef struct {
+	SetBackColor(cGreen);
+	BYTE    bmVRTX[4];       // Vertex Header, should always be "VRTX"
+	INT32   bmVHeadSize;     // Size of vertex array in bytes
+	BYTE    bmVertexCoord;   // Vertexes, type unknown
+} dot3DEMeshVertexes;
+
+typedef struct {
+	SetBackColor(cGreen);
+	BYTE    bmNORM[4];       // Normals Header, should always be "NORM"
+	INT32   bmNHeadSize;     // Size of normals array in bytes
+	BYTE    bmNormalCoord;   // Normals, type unknown
+} dot3DEMeshNormals;
+
+typedef struct {
+	SetBackColor(cGreen);
+	BYTE    bmMAPS[4];       // Maps Header, should always be "MAPS"
+	INT32   bmMHeadSize;     // Size of maps array in bytes
+	string  bmMapsName;      // Map file name
+} dot3DEMeshMaps;
+
+//---------------------------------------------
+
+// Define the headers 
+dot3DEPackHeader bmph;
+
+local int hasBroken = 0;
+
+while (FTell() < (bmph.bpPackSize + 8))
+{
+Printf("Reading position %i in Pack Size %i\n", FTell(), bmph.bpPackSize + 8);
+
+struct // Start of Entry in Pack
+{
+	dot3DEFileHeader bmfh;
+	dot3DETextureHeader bmth;
+
+	// Check for header
+	if( bmfh.bfType != "TXTR" )
+	{
+		Warning( "File is not a 3DE texture. Template stopped." );
+		hasBroken = 1;
+		return -1;
+	}
+
+	// Define the color map table
+	RGBTRIPLE rgbt[bmth.btCMapCount] <hidden=true>; // Hide these results
+
+	// Now, go back and assign the actual colors
+	FSkip(-bmth.btCMapLength);
+
+	local int i = 0;
+	local string ct_r;
+	local string ct_g;
+	local string ct_b;
+	local string ct_str;
+	local int ct_int;
+
+	struct {
+		while (i < bmth.btCMapCount)
+		{
+			// Whole bunch of hacky workarounds to ensure Hex numbers for each color are always double-digit
+			if(rgbt[i].rgbRed == 0) // Ensures that 0x00 is assigned as a value. 0 is a number too!!
+			{
+				ct_r = "00";
+			}
+			else
+			{
+				if(rgbt[i].rgbRed < 16) // If this is less than 16, the Hex conversion will only be a single digit. No good.
+				{
+					SPrintf(ct_r, "0%X", rgbt[i].rgbRed);
+				}
+				else // Finally, everything from 16 and up can be used as-is
+				{
+					SPrintf(ct_r, "%X", rgbt[i].rgbRed);
+				}
+			}
+			
+			// Now, repeat it for the Green and Blue channels
+			
+			if(rgbt[i].rgbGreen == 0)
+			{
+				ct_g = "00";
+			}
+			else
+			{
+				if(rgbt[i].rgbGreen < 16)
+				{
+					SPrintf(ct_g, "0%X", rgbt[i].rgbGreen);
+				}
+				else
+				{
+					SPrintf(ct_g, "%X", rgbt[i].rgbGreen);
+				}
+			}
+			
+			if(rgbt[i].rgbBlue == 0)
+			{
+				ct_b = "00";
+			}
+			else
+			{
+				if(rgbt[i].rgbBlue < 16)
+				{
+					SPrintf(ct_b, "0%X", rgbt[i].rgbBlue);
+				}
+				else
+				{
+					SPrintf(ct_b, "%X", rgbt[i].rgbBlue);
+				}
+			}
+			
+			Printf("position: %i\n", FTell());
+				// Making sure each color is being assigned at the correct position
+			Printf("red: %s | green: %s | blue: %s\n", ct_r, ct_g, ct_b);
+				// Check that colors are being read correctly
+			SPrintf(ct_str, "0x%s%s%s", ct_r, ct_g, ct_b);
+				// Assemble the color code in 0x000000 format, as a string
+			SScanf( ct_str, "0x%X", ct_int );
+				// Convert that string into an integer
+			Printf("for color %i: %s is now %X\n", i, ct_str, ct_int);
+				// Confirm that the conversion happened correctly
+			
+			SetBackColor ( ct_int );
+				// Assign color palette entry as background color
+			RGBTRIPLE aColor;
+			i++;
+		}
+	} RGB3;
+
+
+	// Body header
+	SetBackColor( cBlue );
+	dot3DEBodyHeader bmbh;
+
+	// Define the bytes of the data
+	SetBackColor( cGray );
+	// Calculate bytes per line and padding required
+	local int bytesPerLine = (int)Ceil( bmth.btWidth );
+
+	struct {
+		// Define each line of the image
+		struct BITMAPLINE {
+
+			// Define color data
+			UBYTE     colorIndex[ bmth.btWidth ];
+
+		} lines[ bmth.btHeight ] <optimize=false>;
+	} dot3DEBodyData;
+	
+Printf("Reached end of entry at position %i in Pack Size %i\n", FTell(), bmph.bpPackSize + 8);
+} dot3DEPackEntry;
+
+if (FEof())
+{
+	Printf("End of file reached\n");
+	break;
+}
+else
+{
+	if (!ReadByte(FTell()))
+	{
+		Printf("Skipping empty byte: %i\n", FTell());
+		FSkip(1);
+	}
+	Printf("Next entry starts: %i\n", FTell());
+}
+
+if (hasBroken == 1)
+{
+	break;
+}
+}
+
+// local int newFile = FileNew();

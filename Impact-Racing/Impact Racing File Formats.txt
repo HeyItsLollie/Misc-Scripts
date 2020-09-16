@@ -1,0 +1,123 @@
+This document is intended to aid human reading of
+file formats from the PS1 game "Impact Racing",
+when viewing files in a Hex editor.
+
+Sample files should be included in the folder:
+Misc-Scripts\Impact-Racing\Samples
+
+Note for reading:
+
+2: Data uses two bytes
+4: Data uses four bytes
+
+String: Plain text with a variable length
+Variable: Binary data with a variable length
+
+=========================================================
+                  3DE TEXTURES / MODELS
+=========================================================
+
+3DE is an uncompressed pack format, it can store multiple
+textures & models. However, game models and textures seem
+to be stored in separate files to keep things simpler.
+
+ - Models are plainly named
+ 
+ - Textures share their associated models' filename,
+   followed by the suffix "_T"
+
+---------------
+  PACK HEADER
+---------------
+
+Every .3DE pack starts with this, even if it only contains one entry
+4: Will always be "FORM"
+4: Length of package in bytes, from this point onwards
+4: Will always be "LB3D"
+
+---------------
+ ENTRY  HEADER
+---------------
+
+This is the start of a file entry
+4: Will always be "FORM"
+4: Length of current entry in bytes, from this point onwards
+4: 4-byte string denoting type of entry
+ - TXTR
+ - MESH
+4: Will always be "NAME"
+4: Length of filename
+String: The filename
+ - Length is specified in previous 4 bytes
+ - "00" denotes end of string
+
+---------------
+ TEXTURE  DATA
+---------------
+
+4: Texture Header, should always be "TXHD"
+4: Length of header in bytes. Textures headers are usually 18 bytes / 00 00 00 12
+2: Texture Width in pixels
+2: Texture Height in pixels
+2: Number of colors in palette
+4: Unknown, 00 00 01 23
+8: Padding? 00 00 00 00 / 00 00 00 00
+
+4: Color Map Header, will always be "CMAP"
+ - Indexed color palette
+ 
+4: Length of CMAP in bytes
+ - 3 bytes per color, up to 256 colors. (eg: 48 bytes for 16 colors)
+ 
+ - CMAP has a minimum size of 4 bytes (1 color + 00 for padding)
+   and a maximum size of 768 bytes (256 colors)
+   
+ - Palettes are stored as Red/Green/Blue
+ 
+ - Palette entries are stored in reverse order:
+   0F 0F 0F / 0E 0E 0E / ... / 01 01 01 / 00 00 00
+ 
+4: Start of entry data, will always be "BODY"
+4: Length of entry data in bytes
+Variable: The image data itself, length specified previous 4 bytes.
+ - Data is stored as one pixel per byte, as an indexed color (CMAP) ranged 00 to FF
+
+---------------
+   MESH DATA
+---------------
+
+4: Mesh Header, should always be "MSHD"
+4: Length of Mesh Header in bytes, seems to always be 16 bytes / 00 00 00 10
+4: Number of Vertexes
+4: Possibly Faces?
+4: Possibly Materials?
+4: Unknown
+
+4: Origin Position, "OPOS"
+4: Length of OPOS in bytes, should always be 18 bytes / 00 00 00 12
+4: Origin coordinates, actual format unknown
+
+4: Vertex Header, should always be "VRTX"
+4: Length of Vertex array in bytes
+4: Vertex array data
+ - 18 bytes per vertex
+ - Actual format unknown
+
+4: Normals Header, should always be "NORM"
+4: Length of Normals array in bytes
+4: Normals array data, format unknown
+
+4: Maps Header, should always be "MAPS"
+ - This is referring to texture data
+4: Length of Maps Header in bytes
+String: Maps name?
+
+???????????????
+Progress Halted
+???????????????
+
+There is way more in the mesh data that is yet to be figured out.
+FACENREF (or FACE and NREF)
+EDGE
+TEXMTMHD (or TEXM and TMHD)
+MAPC
