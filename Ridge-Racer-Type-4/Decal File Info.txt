@@ -1,0 +1,72 @@
+Image Data:
+03C0 (0960) to 0BBF (3007)
+
+64x64 pixels
+32 bytes per image row, two pixels per byte, in reverse order
+
+Color index example: Numbers represent pixel order, from 1 - 16 (16 pixels across)
+21 43 65 87 A9 CB ED 0F
+
+Numbers in row correspond to palette index
+0 is transparent
+1 - F are colors #1 to #15
+
+Palette Data:
+0396 (0918) to 03B3 (0947)
+0BD6 (3030) to 0BF3 (3059)
+
+Palette format:
+00/80
+
+Red is the simplest
+- Uses first byte, values 01 - 1F
+
+Green is the most complex
+- Uses both bytes
+- First byte jumps 20 for each shade
+- When first byte maxes out, second byte adds 1 to second byte
+- Green is effectively broken up into four groups
+- Lowest value is 00/80, highest value is E0/83
+
+Blue is fairly straight forward
+- Uses second byte
+- Each shade jumps by 4 per shade
+- Lowest value is 80, highest value is FC
+
+Default palette (Color index 1 - F, 15 colors total)
+(0396 - 03B3)
+FFFF FF83 1FFC 1F80 E0FF E083 00FC 0080 10C2 1082 10C0 1080 00C2 0082 00C0
+(0BD6 - 0BF3)
+FFFF FF83 1FFC 1F80 E0FF E083 00FC 0080 10C2 1082 10C0 1080 00C2 0082 00C0
+
+Redundancy built into palette data, possibly error correction or file validation
+
+Default palette colors:
+White /  Yellow  /  Pink  /  Red   /  Cyan  /  Green  /  Blue  / Black
+Grey  / D.Yellow / Purple / Maroon / D.Cyan / D.Green / D.Blue
+
+Values for every single shade, per channel
+
+Black: 0080
+White: FFFF
+
+Ramping palette through all red values
+(from R01 to R15)
+0180 0280 0380 0480 0580 0680 0780 0880 0980 0A80 0B80 0C80 0D80 0E80 0F80
+R16: 1080
+(from R17 to R31)
+1180 1280 1380 1480 1580 1680 1780 1880 1980 1A80 1B80 1C80 1D80 1E80 1F80
+
+Ramping palette through all green values
+(from G01 to G15)
+2080 4080 6080 8080 A080 C080 E080 0081 2081 4081 6081 8081 A081 C081 E081
+(from G16 to G30)
+0082 2082 4082 6082 8082 A082 C082 E082 0083 2083 4083 6083 8083 A083 C083
+G31: E083
+
+Ramping palette through all blue values
+(from B01 to B15)
+0084 0088 008C 0090 0094 0098 009C 00A0 00A4 00A8 00AC 00B0 00B4 00B8 00BC
+(from B16 to B30)
+00C0 00C4 00C8 00CC 00D0 00D4 00D8 00DC 00E0 00E4 00E8 00EC 00F0 00F4 00F8
+B31: 00FC
