@@ -1,5 +1,5 @@
 # Metal Gear Solid (PS1, 1.0)
-[You know the one](https://www.youtube.com/watch?v=52V32mbTIuc).
+[**You know the one**](https://www.youtube.com/watch?v=52V32mbTIuc).
 
 ![](MGSCamExample.gif)
 
