@@ -11,7 +11,7 @@ Also included is a text file full of assorted memory addresses that I stumbled a
 
 These freecam controls are built for a full-size keyboard, but I have done my best to accommodate keyboards that lack number pads as well. No gamepad controls as of yet.
 
-**` / ~**<br>
+**` / \~**<br>
 Toggle Freecam controls
 
 ### Position
