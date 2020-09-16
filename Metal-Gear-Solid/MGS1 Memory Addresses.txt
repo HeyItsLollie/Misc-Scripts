@@ -1,0 +1,295 @@
+US release of Metal Gear Solid (PS1) 1.0
+
+The majority of this was written up while in
+the outdoors area at the start of the game,
+immediately after the docks.
+
+Addresses related to Snake/Soldier models
+will likely not work outside of this area.
+
+These are not intended to be cheat codes.
+Use Bizhawk and edit/freeze RAM directly.
+
+===============================
+GAMEPLAY AND SYSTEMS
+===============================
+
+027250
+C4 9C 00 08: Walk through walls
+
+0ADAB0 - B4
+If any of these are set, they'll start to tick down every frame until they reach zero.
+During this time, B5 - B8 turn to the value 00, and gameplay freezes.
+Gameplay is restored when bytes B0 - B4 reach value 00.
+
+0ADBAC
+Follow Cam
+00 is overhead, 01 is behind Snake
+
+0B9F72
+First Person Cam with view-corrected controls
+00 is overhead, 01 is Snake's POV, FF skips transition
+0B9F78 is related somehow
+
+1735E2
+Snake Model Visible
+02 is On
+00 is Off
+
+0ADBF8
+Radar Object FOV
+0D is default
+
+0AE0A0
+Pause check
+0 - Normal play
+2 - Paused
+4 - Items (works with camera tweaks, perfect for pausing everything in place)
+
+0AE178
+RADAR
+0 - Normal
+1 - Jammed
+2 - Evasion
+3 - Alert
+
+0AE17B
+Draw or hide entire map (border is still present)
+
+0AE188 - 8D
+Snake's hitbox? When all is 00, he can't be seen
+
+0AE208
+Does something with cam transitions and speeds
+01 snaps cam immediately
+
+0AE1B0
+In-game or cutscene? 01 is default, 00 disables UI + ability to switch items
+
+0AE210-11
+Camera height relative to ground?
+
+0B7526-7
+Current Health
+
+0B7528-9
+Max Health
+
+Oxygen
+0AE1AC-AD
+
+0B4188 - 8B
+Particle layer camera position
+
+0B41B4 - B7
+Particle layer camera FOV
+
+0B4187
+Particle cam enable/disable - 00 disable, 01 enable
+
+0B416C
+Render distance?
+
+0B416E
+00 hides UI behind level geometry
+10 default
+20 and up is UI-only
+
+0B4180
+More particle layer positions
+
+0B41BA
+Number of entities visible in scene
+Crashes if it goes above actual number, or if it goes too low
+
+0B41E1
+0B4221
+Dither! 02 is enabled, 00 is disabled, on alternating frames. Edit together.
+
+0B4584 - 87
+Vertex Lighting setups. It looks like models are shaded based on a direction vector map.
+0x0b4587 is an on/off flag.
+Some values are missing, and cause crashes.
+00/00/0C shows this off perfectly.
+00/00/11 is a cool underlit pink
+Values may be mirrored every 20 bytes? (00/00/11 and 31 are the same)
+
+0B45C0 and 0B4644
+Four bytes, related to vector shading somehow, causes flickering
+
+0BA078
+00 - Hide Snake?
+01 - Default
+02 - Hide Enemies
+
+169780 - CF
+One of the enemies' root position, rotation, etc.
+In the initial snowy area, this is the guard who walks up and down the right-hand side
+
+1698F0
+1698F2
+These two freeze the currently-playing animation
+Bytes need to be set to 01 and 18 respectively
+
+
+0B8C4E/96/DE
+Enemy current action
+00 is default idle
+FF is hold
+
+0B8C6E/B6/E6
+Enemy health
+
+
+0B41DC - DF
+0B421C - 1F
+Render matrix, horizontal and vertical (two bytes each)
+Shifting this causes the renderer to shift the render plane.
+Basically, you can see exactly where polygons are getting culled.
+It helps to edit both simultaneously, both sets are used on alternating frames.
+
+
+===============================
+CAMERA TOOLS
+===============================
+LOCK CAMERA FIRST
+0B9F68-69
+02-00 Locks camera, 00-00 restores to normal
+
+POSITION
+0B9F58-5D
+XX/YY/ZZ
+
+ROTATE AROUND CAMERA TARGET
+0B9F60-61
+Camera Pitch
+0B9F62-63
+Camera Orbit
+
+DISTANCE FROM CAMERA TARGET
+0B9F6C-6D
+
+CAMERA FOV
+0B9F70-71
+
+LOCK TO FIRST PERSON POSITION
+(WILL CHANGE POSITION)
+0B9F72
+
+Unsure about
+50-55
+74-77
+78
+
+===============================
+CAMERA MISC
+===============================
+(While camera is unlocked)
+
+0B9F20 - 3F
+Camera target position
+
+0B9F70 - 73
+FOV
+
+0B9F84 - 89
+Camera position relative to target?
+
+0B9FA4 - AA
+Camera rotation or position from target?
+
+0B9FB9
+Something to do with camera position
+
+78-79 Affects transition
+
+Freezing 60 to 6F prevents cam transition movement
+Freezing 70 to 7F effectively removes cam transition movement when up against corners
+Freezing D0 to EF fucks with the cam transition movement
+
+
+===============================
+SNAKE POSITION / ROTATION? S01A
+===============================
+176520-25
+Position
+X Fine
+X Course
+Y Fine
+Y Course
+Z Fine
+Z Course
+
+176564 - 6B
+Position Velocity
+X Fine
+X Course
+Y Fine
+Y Course
+Z Fine
+Z Course
+
+
+17656C
+17656D
+Pitch Rotation
+6C: Fine
+6D: Course
+
+17656E
+17656F
+Turn Rotation
+6E: Fine
+6F: Course
+00 is down
+04 is right
+08 is up
+0C is left
+
+176570
+176571
+Roll Rotation
+70: Fine
+71: Course
+
+17659C-9F
+Change Memory Pointer For Player Object?
+706E1780 was default in S01A
+Changing to 70001780 caused player to become simple shadow
+
+
+
+===============================
+USEFUL FOR GRAPHICS CORRUPTIONS
+===============================
+
+0B4350-51
+0B4354-55
+Something about render timings, edit together.
+50/54 are way more granula than 51/55, but can only be set to every 4th number. 00, 04, 08, 0C, etc
+
+0B4165
+Seems to shift memory to a specific region, which means editing it
+can cause some weird corruptions.
+EG:
+0B is Vram corruption and freeze
+2D affects the polygon draw timings somehow
+2E is default!
+9B causes the camera to move everywhere.
+FC makes UI position freak out 
+
+0B4169
+Similar to above
+2D causes renderer to slow down to a cool slow ripple
+
+0B41B4
+This affects map polygons somehow, causing *some* to zoom towards the camera.
+It doesn't make any sense.
+Next byte does the same, but crashes the game fast.
+
+0B41D1
+More graphical corruption, 32 is the default
+Going from 21 to 22 causes some cool texture corruption.
+
+0B41E0 - 0B453F
+This whole block affects VRAM in a big way
