@@ -11,7 +11,7 @@ I'm a total hobbyist and only poke and prod at GB dev in my own time. Look towar
 * [**Cheat Sheet - 00h PAL01.png**](Cheat%20Sheet%20-%2000h%20PAL01.png)<br>
  — 15-Bit RGB to Hexadecimal color cheat sheet, for use with `PAL##` commands.
 
-* [**VM\\_LOAD\\_PALETTE.txt**](VM_LOAD_PALETTE.txt)<br>
+* [**VM\_LOAD\_PALETTE.txt**](VM_LOAD_PALETTE.txt)<br>
  — Alternative for loading palettes at runtime, provided by @toxa in the official GB Studio Discord channel. Frankly, way more user-friendly and flexible. Recommend using this instead of `VM_SGB_TRANSFER` when working with GBVM.
 
   * There's also a GB Studio script by NalaFala, [Set Palette Colors](https://github.com/Y0UR-U5ERNAME/gbs-plugin-collection/blob/main/plugins/setPaletteColorsPlugin/events/eventSetPaletteColors.js), which appears to do the same as the GBVM code above. I've yet to test this, but it looks like it does the trick. 
