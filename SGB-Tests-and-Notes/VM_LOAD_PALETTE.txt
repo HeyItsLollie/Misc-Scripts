@@ -1,0 +1,30 @@
+Via @toxa in GB Studio discord:
+~~~
+VM_LOAD_PALETTE         0b11110000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+
+put R, G, B values instead of zeroes into .GGB_PAL rows
+each group of 3 numbers is R, G, B - 4 groups for 4 colors in the palette
+
+0b11110000 is a bit mask. the number of "ones" must match the number of
+.CGB_PAL rows. position of 1 in a binary number tells in what palette
+next .CGB_PAL row goes.
+~~~
+
+So if I wanted to only change the third SGB palette, and set it to
+a palette with the colors White, Red, Green, and Blue, I would use
+the following code as a GBVM script:
+
+VM_LOAD_PALETTE         0b00100000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
+.CGB_PAL 31,31,31 31,0,0 0,31,0 0,0,31
+
+Way, way easier.
+TODO: Test above to make sure it works as intended.
+
+
+NalaFala has also made a plug-in to set new palette colors in GB Studio.
+I've yet to test this, but it looks like it does the job.
+https://github.com/Y0UR-U5ERNAME/gbs-plugin-collection/blob/main/plugins/setPaletteColorsPlugin/events/eventSetPaletteColors.js

@@ -1,0 +1,188 @@
+VM_SGB_TRANSFER command list:
+https://gbdev.io/pandocs/SGB_Command_Summary.html
+
+
+
+00h PAL01 | 01h PAL23 | 02h PAL03 | 03h PAL12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+https://gbdev.io/pandocs/SGB_Command_Pallete.html
+
+VM_SGB_TRANSFER
+.db ((0x00 << 3) | 1), 0xFF, 0xFF, 0x1F, 0x04, 0xE0, 0x07, 0x00, 0x7C, 0, 0, 0, 0, 0, 0, 0 ; PAL01 packet
+;      #1         #2      ^ #3 ^      ^ #4 ^      ^ #5 ^      ^ #6 ^    #7    #8    #9  #10
+
+ #1: 00h - PAL01. We also have 01h - PAL23, 02h - PAL03,
+     and 03h - PAL12.
+ #2: Length of .db packet. I'm assuming this is always 1.
+ #3: Color 0, the "global" color for all palettes.
+     All colors use two bytes, detailed further below
+ #4: PAL0, Color 1
+ #5: PAL0, Color 2
+ #6: PAL0, Color 3
+ #7: PAL1, Color 1
+ #8: PAL1, Color 2
+ #9: PAL1, Color 3
+#10: Unused, always 0.
+
+PALETTE RGB raw colors
+BizHawk "raw" color values appear in reverse order,
+compared to what we write to reproduce them.
+  Red: $041F (255,  0,  8)
+Green: $07E0 (  0,255,  8)
+ Blue: $7C00 (  0,  0,255)
+
+Reproduction:
+0x1F, 0x04, 0xE0, 0x07, 0, 0x7C
+  Red (0x1F, 0x04): $041F
+Green (0xE0, 0x07): $07E0
+ Blue (0x00, 0x7C): $7C00
+
+
+I've written values below in two forms:
+- SGB/CGB palette values, as they appear in GB Studio
+- The corresponding HEX values, for ""easier"" adding together
+
+Red is stored exclusively in Byte 1. Its values are a 1:1 translation
+from decimal to hex. It loops to R0 at 20h.
+Red shares Byte 1 with Green.
+				00h = R0, 01h = R1, 02h = R2, 03h = R3
+				04h = R4, 05h = R5, 06h = R6, 07h = R7
+
+Green is spread across both bytes. It's a bit of a mess.
+Byte 1, Bit 1 = G increments by 1 every 20h, from 0 - 7.
+                Green shares a byte with Red.
+				00h = G0, 20h = G1, 40h = G2, 60h = G3
+				80h = G4, A0h = G5, C0h = G6, E0h = G7
+				
+Byte 2: Bit 2 = Every 1h, G increments by 8, from 0 - 24.
+                Green loops to G0 at 4h, and shares a byte with Blue.
+				00h = G0, 01h = G8, 02h = G16, 03h = G24
+				04h = G0, 05h = G8, 06h = G16, 07h = G24
+				etc
+
+Blue is stored exclusively in Byte 2.
+B increments by 1 every 04h, and loops to B0 at 80h.
+Blue shares Byte 2 with Green.
+				00h = B0, 04h = B1, 08h = B2, 0Ch = B3
+				10h = B4, 14h = B5, 18h = B6, 1Ch = B7
+				etc
+
+BYTE 1 of 2
+Red:
+	0x00 to 0x1F (loop)
+		SGB	: 00 to 15 / 16 to 31 (+1 for every 0x01)
+		HEX	: 00 to 0F / 10 to 1F
+Green:
+	0x2? to 0xE?
+		SGB	: 00 / 01 / 02 / 03 / 04 / 05 / 06 / 07
+		HEX	: 00 / 20 / 40 / 60 / 80 / A0 / C0 / E0
+Blue: n/a
+
+BYTE 2 of 2
+Red: n/a
+Green:
+	0x?0/?1/?2/?3 (loop)
+		SGB	: 00 /  08 /  16 /  24
+		HEX	: 00 /  01 /  02 /  03
+Blue:
+	0x0? to 0x7? (loop)
+		SGB	: 00 /  04 /  08 /  12 /  16 /  20 /  24 /  28
+		HEX	: 00 /  10 /  20 /  30 /  40 /  50 /  60 /  70
+	0x?0/?4/?8/?C (loop)
+		SGB	: 00 / 01 / 02 / 03
+		HEX	: 00 / 04 / 08 / 0C
+
+
+
+
+So, setting colors via PAL01/PAL23/PAL03/PAL12 is a hassle.
+Thankfully, there's a much more user-friendly option.
+
+Via @toxa in GB Studio discord:
+~~~
+VM_LOAD_PALETTE         0b11110000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+.CGB_PAL 0,0,0 0,0,0 0,0,0 0,0,0
+
+put R, G, B values instead of zeroes into .GGB_PAL rows
+each group of 3 numbers is R, G, B - 4 groups for 4 colors in the palette
+
+0b11110000 is a bit mask. the number of "ones" must match the number of
+.CGB_PAL rows. position of 1 in a binary number tells in what palette
+next .CGB_PAL row goes.
+~~~
+
+So if I wanted to only change the third SGB palette, and set it to
+a palette with the colors White, Red, Green, and Blue, I would use
+the following code as a GBVM script:
+
+VM_LOAD_PALETTE         0b00100000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
+.CGB_PAL 31,31,31 31,0,0 0,31,0 0,0,31
+
+Way, way easier.
+TODO: Test above to make sure it works as intended.
+
+
+NalaFala has also made a plug-in to set new palette colors in GB Studio.
+I've yet to test this, but it looks like it does the job.
+https://github.com/Y0UR-U5ERNAME/gbs-plugin-collection/blob/main/plugins/setPaletteColorsPlugin/events/eventSetPaletteColors.js
+
+
+
+
+
+04h ATTR_BLK
+~~~~~~~~~~~~
+https://gbdev.io/pandocs/SGB_Command_Attribute.html
+
+VM_SGB_TRANSFER
+.db ((0x04 << 3) | 1), 2, 0x01, 0x01, 2, 3, 17, 5, 0x01, 0x02, 2, 6, 17, 8, 0, 0 ; ATTR_BLK, two palettes over one packet
+        #1         #2  #3  #4    #5   #6 #7 #8 #9   #10                     #11
+
+#1: 04h - ATTR_BLK
+#2: Length, number of .db packets. We're only sending one packet.
+#3: Number of data sets, ie; How many palette regions are we setting
+    in a single SGB transfer command?
+	Here, we're setting two palette regions.
+#4: This is the start of Data Set #1. Region behavior.
+    We're only using bit 0, "Change colors inside surrounded area,"
+	so we're setting it to Yes.
+	If we wanted "Change colors of surrounding character line"
+	or "Change colors outside surrounding area," we would need to use
+	(0x01 << 1) or (0x01 << 2) respectively.
+	We can also enable all three using:
+	((0x01 << 0) | (0x01 << 1) | (0x00 << 2))
+	Yes: Inside  Yes: Surround   No: Outside
+TODO: Haven't fully tested this yet
+#5: Color Palette Designation
+    We're only using bit 0, "Palette Number for inside surrounded area,"
+	and setting it to BG2 (0x01).
+	Available palettes are BG1 (0x00) to BG4 (0x03).
+	In GB Studio's "Palettes" window, These map to Palettes 5 - 8.
+	We can set palettes for every region type by setting the right bit.
+	((0x01 << 0) | (0x02 << 1) | (0x00 << 2))
+	 BG2: Inside  BG3: Surround  BG1: Outside
+TODO: Haven't fully tested this yet
+#6: Top-left corner of region: X Position.
+#7: Top-left corner of region: Y Position.
+#8: Bottom-right corner of region: X Position.
+#9: Bottom-right corner of region: Y Position.
+#10:This is the start of Data Set #2.
+    This data set reads as follows:
+	- Change colors inside surrounded area: Yes
+	- Palette for inside area: BG3
+	- Top-left X: 2
+	- Top-left Y: 6
+	- Bottom-right X: 17
+	- Bottom-right Y: 8
+#11:There is no more data, so the rest of the packet is padded with 0's.
+
+VM_SGB_TRANSFER
+.db ((0x04 << 3) | 2), 5, 0x01, 0x01, 2, 3, 17, 5, 0x01, 0x02, 2, 6, 17, 8, 0x01, 0x03 ; five palettes over two packets
+.db 0, 11, 19, 15, 0x01, 0x02, 0, 16, 19, 17, 0x01, 0x01, 8, 6, 8, 6
+
+VM_SGB_TRANSFER
+.db ((0x04 << 3) | 2), 3, 0x01, 0x01, 10, 2, 17, 7, 0x01, 0x02, 2, 10, 9, 15, 0x01, 0x03 ; three palettes over two packets
+.db 10, 10, 17, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
