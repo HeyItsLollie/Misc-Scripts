@@ -1,11 +1,10 @@
-#Super Game Boy in GB Studio
-##✨ Lollie's Notes & Tests ✨
+# Super Game Boy in GB Studio
+## ✨ Lollie's Notes & Tests ✨ ##
 This is a repository for the various notes I've made while testing SBG features and GBVM scripting in GB Studio.
 
 I'm a total hobbyist and only poke and prod at GB dev in my own time. Look towards resources like [GB Dev's Pan Docs](https://gbdev.io/pandocs/SGB_Functions.html) for more comprehensive documentation!
 
-##Contents (sorted by SGB command / GBVM feature)
-###VM\_SGB\_TRANSFER
+## Contents (sorted by SGB command / GBVM feature) ##
 * [**VM\\_SGB\\_TRANSFER.txt**](VM_SGB_TRANSFER.txt)<br>
  — Big catch-all document with personal notes for VM\_SGB\_TRANSFER commands and related GBVM scripts. Loosely organized and formatted for web viewing, but no guarantees that it'll always be easy to read.
 
