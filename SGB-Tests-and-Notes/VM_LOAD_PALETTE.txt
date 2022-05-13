@@ -18,13 +18,14 @@ So if I wanted to only change the third SGB palette, and set it to
 a palette with the colors White, Red, Green, and Blue, I would use
 the following code as a GBVM script:
 
-VM_LOAD_PALETTE         0b00100000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
+                          4321
+						  vvvv
+VM_LOAD_PALETTE         0b01000000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
 .CGB_PAL 31,31,31 31,0,0 0,31,0 0,0,31
 
 Way, way easier.
-TODO: Test above to make sure it works as intended.
 
 
-NalaFala has also made a plug-in to set new palette colors in GB Studio.
-I've yet to test this, but it looks like it does the job.
+NalaFala has made a plug-in to set new palette colors in GB Studio.
+This *doesn't* work with Super Game Boy. It's for DMG and Color GB.
 https://github.com/Y0UR-U5ERNAME/gbs-plugin-collection/blob/main/plugins/setPaletteColorsPlugin/events/eventSetPaletteColors.js
