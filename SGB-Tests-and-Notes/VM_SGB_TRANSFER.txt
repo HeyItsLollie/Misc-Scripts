@@ -20,7 +20,7 @@ VM_SGB_TRANSFER
 	 Attempting to leave one palette blank or zeroed out will cause
 	 that palette to be set as completely black.
 	 Consider VM_LOAD_PALETTE, detailed at the end of this section.
- #2: The length of the packet.
+ #2: The length of the command, the number of .db packets to send.
 	 For PALxy, this is fixed and will always be 1.
  #3: Color 0, the "global" color for all palettes.
      Notice that we're using two bytes here. All colors use two bytes.
@@ -31,7 +31,7 @@ VM_SGB_TRANSFER
  #7: PAL1, Color 1
  #8: PAL1, Color 2
  #9: PAL1, Color 3
-#10: Unused, always 0.
+#10: The last byte of this command is unused, so it is padded with a 0.
 
 In the example script above, Color 0 has been set to white.
 PAL0's Colors 1 - 3 have been set to the colors that GB Studio returns
@@ -168,12 +168,14 @@ VM_SGB_TRANSFER
 
  #1: 04h - ATTR_BLK
 	 Apply color palettes to a rectangle block of tiles.
- #2: Length, number of .db packets. We're only sending one packet.
+ #2: The length of the command, the number of .db packets to send.
+	 Here, we're only sending one packet.
  #3: Number of data sets, ie; How many palette regions are we setting
 	 in a single SGB transfer command?
 	 Here, we're setting two palette regions.
  #4: This is the start of Data Set #1.
 	 This byte determines how we can apply palettes to a block of tiles.
+	 Three bits are used:
      Bit 0: (X << 0) "Change palette inside block"
 	 Bit 1: (X << 1) "Change palette of block's border"
 	 Bit 2: (X << 2) "Change palette outside block"
@@ -223,7 +225,7 @@ VM_SGB_TRANSFER
 	 #13: Top-left Y: 6
 	 #14: Bottom-right X: 17
 	 #15: Bottom-right Y: 8
-#16: There is no more data, so the rest of the packet is padded with 0's.
+#16: There are no more datasets, so the rest of the packet is padded with 0's.
 
 
 VM_SGB_TRANSFER
@@ -243,11 +245,12 @@ https://gbdev.io/pandocs/SGB_Command_Attribute.html#sgb-command-05h---attr_lin
 
 VM_SGB_TRANSFER
 .db ((0x05 << 3) | 1), 2, ((3 << 0) | (1 << 5) | (0 << 7)), ((11 << 0) | (2 << 5) | (1 << 7)), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ; ATTR_LIN
-        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+        #1         #2  #3     #4         #5         #6           #7         #8         #9     #10
 
  #1: 05h - ATTR_LIN
 	 Apply a palette to an entire column or row of tiles
- #2: Length, number of .db packets. Here, we're only sending one packet.
+ #2: The length of the command, the number of .db packets to send.
+	 Here, we're only sending one packet.
  #3: Number of data sets, ie; How many palette regions are we setting
 	 in a single SGB transfer command?
 	 Here, we've set two palette regions.
@@ -260,7 +263,7 @@ VM_SGB_TRANSFER
  #5: Bits 5 - 6 are reserved for palette number 0 - 3.
 	 We only need to use Bit 5.
 	 Here, we've set PAL1.
- #6: This sets whether the line is Vertical (0) or Horizontal (1).
+ #6: Bit 7 sets whether the line is Vertical (0) or Horizontal (1).
 	 Here, we're creating a Vertical line, so #4 will set the X position.
  #7: This is the start of Data Set #2.
 	 Everything from #4 to #6 applies here too, as for each data set.
@@ -268,7 +271,7 @@ VM_SGB_TRANSFER
 	 #7: Position is Y 11
 	 #8: Palette: PAL2
 	 #9: Horizontal line, so #7 sets Y position.
-#10: There is no more data, so the rest of the packet is padded with 0's.
+#10: There are no more datasets, so the rest of the packet is padded with 0's.
 
 
 
@@ -278,19 +281,29 @@ VM_SGB_TRANSFER
 https://gbdev.io/pandocs/SGB_Command_Attribute.html#sgb-command-06h---attr_div
 
 VM_SGB_TRANSFER
-.db ((0x06 << 3) | 1), ; ATTR_DIV
-        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+.db ((0x06 << 3) | 1), ((3 << 0) | (2 << 2) | (1 << 4) | (1 << 6)), 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ; ATTR_DIV
+        #1         #2      #3         #4         #5         #6     #7  #8
 
  #1: 06h - ATTR_DIV
- #2: 
- #3: 
- #4: 
- #5: 
- #6: 
- #7: 
- #8: 
- #9: 
-#10: 
+	 Apply palettes across the whole screen, divided into three sections.
+ #2: The length of the command, the number of .db packets to send.
+	 For ATTR_DIV, this is fixed and will always be 1.
+ #3: The data for all three palettes is set in a single byte, using bits.
+	 Bits 0 - 1:
+	 (X << 0) Palette for the region Below/Right of the dividing position.
+	 For #3 to #5, X can be set to one of 4 available palettes:
+		0 (PAL0) to 3 (PAL3).
+ #4: Bits 2 - 3:
+	 (X << 2) Palette for the line marking the dividing position.
+	 The direction of the line (Vertical or Horizontal) is set in #6.
+ #5: Bits 4 - 5: Palette for the region above/left of the dividing position.
+	 (X << 4) 
+ #6: Bits 6 - 7:
+	 (X << 6) This sets whether the region is split vertically or horizontally.
+	 X can be 0 (Vertical) or 1 (Horizontal)
+	 Here, we've set 1 to split the region horizontally.
+ #7: This is the X *or* Y position of the line. Direction is set in #6, above.
+ #8: The rest of the packet is unused, so it is padded with 0's.
 
 
 
@@ -300,19 +313,43 @@ VM_SGB_TRANSFER
 https://gbdev.io/pandocs/SGB_Command_Attribute.html#sgb-command-07h---attr_chr
 
 VM_SGB_TRANSFER
-.db ((0x07 << 3) | 1), ; ATTR_CHR
-        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+.db ((0x07 << 3) | 1), 1, 0, 4, 0, 0, ((1 << 6) | (2 << 4) | (3 << 2) | (1 << 0)), 0, 0, 0, 0, 0, 0, 0, 0, 0 ; ATTR_CHR (bits are in high-to-low order)
+        #1        #2  #3 #4  ^#5^ #6      #7         #8         #9        #10     #11
 
  #1: 07h - ATTR_CHR
- #2: 
- #3: 
- #4: 
- #5: 
- #6: 
- #7: 
- #8: 
- #9: 
-#10: 
+	 Apply palettes per-tile (aka "character") in a continuous stream.
+ #2: The length of the command, the number of .db packets to send.
+	 Here, we're only sending one packet.
+ #3: X position of the beginning position.
+ #4: Y position of the beginning position.
+ #5: The number of datasets to send.
+	 Note that two bytes are used to cover a range of 360 values. (0 to 359)
+	 Byte 1: The "small" half of the value.
+		If Byte 2 is 0, this ranges from 0 to 255.
+		If Byte 2 is 1, this ranges from 0 to 103.
+	 Byte 2: The "large" half of the value.
+		"1" increments the number of datasets to send by 256.
+		Byte 1 is effectively added to this value to complete
+		the number of datasets to send.
+ #6: The direction in which palettes should be applied per tile.
+	 There are two options: 0 (Left-to-Right) or 1 (Top-to-Bottom)
+	 The first will be applied at the X/Y position.
+	 Each subsequent palette will follow in the direction specified,
+	 and wrap the screen as needed.
+ #7: The data for one packet can be stored in two bits.
+	 Thus, one byte can store four packets, at Bits 0, 2, 4, and 6.
+	 However, packets are stored in high-to-low order: 6, 4, 2, and 0.
+	 For easier reading, I've written these bits in high-to-low order.
+	 
+	 #7 is the first dataset.
+	 (X << 6) X is the palette for the first tile.
+	 As always, there are four palettes: 0 (PAL0) to 3 (PAL3)
+ #8: Dataset #2, as above. Bit 4, (X << 4)
+ #9: Dataset #3, as above. Bit 2, (X << 2)
+#10: Dataset #4, as above. Bit 0, (X << 0)
+	 This is the last dataset that can fit in one byte.
+#11: If we had five or more datasets, the fifth would begin here in Bit 6.
+	 There are no more datasets, so the rest of the packet is padded with 0's.
 
 
 
@@ -321,12 +358,160 @@ VM_SGB_TRANSFER
 ~~~~~~~~~~~~
 https://gbdev.io/pandocs/SGB_Command_Sound.html#sgb-command-08h---sound
 
+Super Game Boy features up to 73 sound effects built-in for developers to use.
+These sounds are split into two categories, so I'll use two scripts to explain them.
+
+Sound Effect A table:
+
 VM_SGB_TRANSFER
-.db ((0x08 << 3) | 1), ; SOUND
-        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+.db ((0x08 << 3) | 1), 0x01, 0, ((3 << 0) | (1 << 2)), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; SOUND
+        #1         #2   #3  #4      #5         #6     #7 #8
 
  #1: 08h - SOUND
- #2: 
+	 Start and Stop playback of internal sound effects and music.
+ #2: The length of the command, the number of .db packets to send.
+	 For SOUND, this is fixed and will always be 1.
+ #3: Sound Effect A - Sound Code
+	 There are two internal sound effect categories: "A" and "B".
+	 "A" sound effects are all one-shot effects.
+	 They play exclusively on SNES channels 6 and 7.
+	 
+	 For a table of available "A" sound effects, see:
+	 https://gbdev.io/pandocs/SGB_Command_Sound.html#sound-effect-a-flag-table
+	 
+	 Here, I'm using hexadecimal simply because it's easier to match
+	 against the hex indexes in the table above, rather than try to
+	 convert them into decimal numbers.
+	 ie: 0x10 becomes 16, 0x20 becomes 32.
+ #4: Sound Effect B - Sound Code
+	 "B" sound effects are (mostly) all looping sound effects.
+	 See the second example for more information.
+ #5: Playback settings for both "A" and "B" sound effect types
+	 are stored in a single byte across four bits.
+	 (X << 0) Sound Effect A - Pitch
+	 Values range from 0 (Low) to 3 (High)
+	 
+	 Please see "Sound Effect A Flag Table" linked in #3 for
+	 recommended pitch settings.
+ #6: (X << 2) Sound Effect A - Volume
+	 Values range from 0 (High) to 2 (Low), and then 3 (Mute).
+	 
+	 Bits 4 and 6 are used for Sound Effect B.
+	 See the second example for more information.
+ #7: Music Score Code
+#####TODO: Yet to be tested, no internal music table exists.
+ #8: The rest of the packet is unused, so it is padded with 0's.
+
+
+Sound Effect B table:
+
+VM_SGB_TRANSFER
+.db ((0x08 << 3) | 1), 0, 0x01, ((3 << 0) | (1 << 2)), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; SOUND
+						   #1       #2         #3
+
+ #1: Sound Effect B - Sound Code
+	 "B" sound effects are (mostly) all looping sound effects.
+	 They play across SNES channels 0, 1, 4, and 5.
+	 
+	 For a table of available "B" sound effects, see:
+	 https://gbdev.io/pandocs/SGB_Command_Sound.html#sound-effect-b-flag-table
+ #2: (X << 4) Sound Effect B - Pitch
+	 Values range from 0 (Low) to 3 (High)
+	 
+	 Please see "Sound Effect B Flag Table" linked in #1 for
+	 recommended pitch settings.
+ #3: (X << 6) Sound Effect B - Volume
+	 Values range from 0 (High) to 2 (Low).
+	 Unlike "Sound Effect A - Volume" in the first example,
+	 3 goes unused for Sound Effect B.
+
+
+Music Score:
+
+VM_SGB_TRANSFER
+.db ((0x08 << 3) | 1), 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; SOUND
+								#1
+
+ #1: Music Score code
+	 This value isn't useful for dev, but it does expose a cute extra:
+	 Super Game Boy has a credits song!
+	 
+	 You don't need a sound test to hear it either, just press the
+	 left and right shoulder buttons in this sequence:
+								 Left ×3
+								Right ×3
+								 Left ×3
+								Right ×3
+								Right ×4
+	 
+	 As it turns out, both the original Super Game Boy and the JP-only
+	 Super Game Boy 2 feature their own credits tune on "2":
+	  - SGB's demo song is a cruisy showtune song.
+	    (The US "Proto" cart features the same song.)
+	  - SGB2's demo song is an upbeat blues-rock song.
+	 Both songs loop indefinitely, and there's only one way to actually
+	 stop them from playing.
+	  
+	  - "1" is the SGB start-up jingle.
+	 It plays exactly once and has a definitive end point.
+	 This will stop the demo song from playing.
+	  
+	  - "0" is a dummy code and effectively does nothing.
+	 
+	 
+	 Allegedly, music can be "muted" (faded out) by setting the
+	 mute commands for both Sound Effect A and B (value 128 or 0x80),
+	 and by setting volume and pitch for both sound effect channels.
+	 
+	 See "Notes" for 08h - SOUND
+	 https://gbdev.io/pandocs/SGB_Command_Sound.html#sgb-command-08h---sound
+	 
+	 However in my testing, this doesn't actually stop looping music.
+	 Using the dummy code or playing any SNES sound effect will cause
+	 looping music to fade back to full volume.
+	 
+	 It seems the best way to make SNES music actually stop, is to
+	 play a one-shot song with an end point in it.
+
+
+
+
+09h SOU_TRN
+~~~~~~~~~~~~
+https://gbdev.io/pandocs/SGB_Command_Sound.html#sgb-command-09h---sou_trn
+
+VM_SGB_TRANSFER
+.db ((0x09 << 3) | 1), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ; SOU_TRN
+        #1        #2
+
+ #1: 09h - SOU_TRN
+	 Sound Transfer, used to transfer sound code or data to the SNES.
+ #2: The length of the command, the number of .db packets to send.
+	 For SOU_TRN, this is fixed and will always be 1.
+	 
+	 Yes, it really seems there's no other values for this command.
+	 
+	 Pan Docs mention that sound code/data is sent by VRAM-Transfer.
+	 https://gbdev.io/pandocs/SGB_VRAM_Transfer.html
+	 Currently, I don't know how to use this. Or how to create any
+	 SNES sound data for that matter. If anyone knows anything, help!
+
+
+
+
+XXh Template
+~~~~~~~~~~~~
+https://gbdev.io/pandocs/
+
+VM_SGB_TRANSFER
+.db ((0x08 << 3) | 1), ; X
+        #1        #2  #3 #4  ^#5^ #6      #7         #8         #9        #10     #11
+
+ #1: XXh - X
+	 X
+ #2: The length of the command, the number of .db packets to send.
+	 For SOUND, this is fixed and will always be 1.
+	 Here, we're only sending one packet.
  #3: 
  #4: 
  #5: 
