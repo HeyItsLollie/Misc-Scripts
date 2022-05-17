@@ -5,19 +5,26 @@ https://gbdev.io/pandocs/SGB_Command_Summary.html
 
 00h PAL01 | 01h PAL23 | 02h PAL03 | 03h PAL12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-https://gbdev.io/pandocs/SGB_Command_Pallete.html
+https://gbdev.io/pandocs/SGB_Command_Pallete.html#sgb-command-00h---pal01
 
 VM_SGB_TRANSFER
-.db ((0x00 << 3) | 1), 0xFF, 0xFF, 0x1F, 0x04, 0xE0, 0x07, 0x00, 0x7C, 0, 0, 0, 0, 0, 0, 0 ; PAL01 packet
+.db ((0x00 << 3) | 1), 0xFF, 0x7F, 0x1F, 0x04, 0xE0, 0x07, 0x00, 0x7C, 0, 0, 0, 0, 0, 0, 0 ; PAL01 packet
 ;      #1         #2      ^ #3 ^      ^ #4 ^      ^ #5 ^      ^ #6 ^    #7    #8    #9  #10
 
  #1: 00h - PAL01 (Currently set)
      01h - PAL23
 	 02h - PAL03
 	 03h - PAL12
- #2: Length of .db packet. I'm assuming this is always 1.
+	 Set the colors for palettes X and Y.
+	 These commands force you to set two palettes at a time.
+	 Attempting to leave one palette blank or zeroed out will cause
+	 that palette to be set as completely black.
+	 Consider VM_LOAD_PALETTE, detailed at the end of this section.
+ #2: The length of the packet.
+	 For PALxy, this is fixed and will always be 1.
  #3: Color 0, the "global" color for all palettes.
-     All colors use two bytes, detailed further below
+     Notice that we're using two bytes here. All colors use two bytes.
+	 The format is detailed further below.
  #4: PAL0, Color 1
  #5: PAL0, Color 2
  #6: PAL0, Color 3
@@ -25,6 +32,13 @@ VM_SGB_TRANSFER
  #8: PAL1, Color 2
  #9: PAL1, Color 3
 #10: Unused, always 0.
+
+In the example script above, Color 0 has been set to white.
+PAL0's Colors 1 - 3 have been set to the colors that GB Studio returns
+when using Red 31, Green 31, and Blue 31 respectively.
+Note that because #7, #8, and #9 are set to 0, PAL1's colors will be
+set to an all-black palette. Be sure to set these colors correctly too.
+
 
 PALETTE RGB raw colors
 BizHawk "raw" color values appear in reverse order,
@@ -43,6 +57,10 @@ Green (0xE0, 0x07): $07E0
 I've written values below in two forms:
 - SGB/CGB palette values, as they appear in GB Studio
 - The corresponding HEX values, for ""easier"" adding together
+
+I've also created a cheat sheet for these values.
+https://github.com/HeyItsLollie/Misc-Scripts/blob/master/SGB-Tests-and-Notes/Cheat%20Sheet%20-%2000h%20PAL01.png
+
 
 BYTE 1 of 2
 Red:
@@ -98,8 +116,10 @@ Blue shares Byte 2 with Green.
 
 
 
-So, setting colors via PAL01/PAL23/PAL03/PAL12 is a hassle.
-Thankfully, there's a much more user-friendly option.
+VM_LOAD PALETTE
+~~~~~~~~~~~~~~~
+As we can see, the PALxy commands are kind of a hassle to set up.
+Thankfully, there's a far more user-friendly option for GBVM.
 
 Via @toxa in GB Studio discord:
 ~~~
@@ -129,64 +149,189 @@ VM_LOAD_PALETTE         0b01000000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
 Way, way easier.
 
 
+Related info:
 NalaFala has made a plug-in to set new palette colors in GB Studio.
 This *doesn't* work with Super Game Boy. It's for DMG and Color GB.
+This is still useful outside of SGB, but just keep this in mind.
 https://github.com/Y0UR-U5ERNAME/gbs-plugin-collection/blob/main/plugins/setPaletteColorsPlugin/events/eventSetPaletteColors.js
-
 
 
 
 
 04h ATTR_BLK
 ~~~~~~~~~~~~
-https://gbdev.io/pandocs/SGB_Command_Attribute.html
+https://gbdev.io/pandocs/SGB_Command_Attribute.html#sgb-command-04h---attr_blk
 
 VM_SGB_TRANSFER
-.db ((0x04 << 3) | 1), 2, 0x01, 0x01, 2, 3, 17, 5, 0x01, 0x02, 2, 6, 17, 8, 0, 0 ; ATTR_BLK, two palettes over one packet
-        #1         #2  #3  #4    #5   #6 #7 #8 #9   #10                     #11
+.db ((0x04 << 3) | 1), 2, (1 << 0), (1 << 1), 2, 3, 17, 5, (1 << 0), (2 << 1), 2, 6, 17, 8, 0, 0 ; ATTR_BLK, two palettes over one packet
+        #1         #2  #3    #4        #5    #6 #7  #8 #9    #10       #11   #12 #13 #14 #15 #16
 
-#1: 04h - ATTR_BLK
-#2: Length, number of .db packets. We're only sending one packet.
-#3: Number of data sets, ie; How many palette regions are we setting
-    in a single SGB transfer command?
-	Here, we're setting two palette regions.
-#4: This is the start of Data Set #1. Region behavior.
-    We're only using bit 0, "Change colors inside surrounded area,"
-	so we're setting it to Yes.
-	If we wanted "Change colors of surrounding character line"
-	or "Change colors outside surrounding area," we would need to use
-	(0x01 << 1) or (0x01 << 2) respectively.
-	We can also enable all three using:
-	((0x01 << 0) | (0x01 << 1) | (0x00 << 2))
-	Yes: Inside  Yes: Surround   No: Outside
-TODO: Haven't fully tested this yet
-#5: Color Palette Designation
-    We're only using bit 0, "Palette Number for inside surrounded area,"
-	and setting it to BG2 (0x01).
-	Available palettes are BG1 (0x00) to BG4 (0x03).
-	In GB Studio's "Palettes" window, These map to Palettes 5 - 8.
-	We can set palettes for every region type by setting the right bit.
-	((0x01 << 0) | (0x02 << 1) | (0x00 << 2))
-	 BG2: Inside  BG3: Surround  BG1: Outside
-TODO: Haven't fully tested this yet
-#6: Top-left corner of region: X Position.
-#7: Top-left corner of region: Y Position.
-#8: Bottom-right corner of region: X Position.
-#9: Bottom-right corner of region: Y Position.
-#10:This is the start of Data Set #2.
-    This data set reads as follows:
-	- Change colors inside surrounded area: Yes
-	- Palette for inside area: BG3
-	- Top-left X: 2
-	- Top-left Y: 6
-	- Bottom-right X: 17
-	- Bottom-right Y: 8
-#11:There is no more data, so the rest of the packet is padded with 0's.
+ #1: 04h - ATTR_BLK
+	 Apply color palettes to a rectangle block of tiles.
+ #2: Length, number of .db packets. We're only sending one packet.
+ #3: Number of data sets, ie; How many palette regions are we setting
+	 in a single SGB transfer command?
+	 Here, we're setting two palette regions.
+ #4: This is the start of Data Set #1.
+	 This byte determines how we can apply palettes to a block of tiles.
+     Bit 0: (X << 0) "Change palette inside block"
+	 Bit 1: (X << 1) "Change palette of block's border"
+	 Bit 2: (X << 2) "Change palette outside block"
+	 For each bit, X can be 0 (Disable) or 1 (Enable)
+			
+	 All three can be set simultaneously, using:
+	 ((1 << 0) | (0 << 1) | (1 << 2))
+	     #A         #B         #C
+		A: 1 (Enable)  Inside block
+		B: 0 (Disable) Block's border
+		C: 1 (Enable)  Outside block
+#####TODO: Haven't fully tested this yet
+		
+	 Here, we're changing the palette for tiles inside the block.
+	 We aren't setting any other regions, so we only need to set Bit 0.
+ #5: The palette/s to apply to our block/s.
+	 As in #4, the bits are as follows:
+	 Bit 0: (X << 0) "Palette number for inside block"
+	 Bit 1: (X << 1) "Palette number for block's border"
+	 Bit 2: (X << 2) "Palette number for outside block"
+     X can be set to one of 4 available palettes: 0 (PAL0) to 3 (PAL3).
+	 In GB Studio's "Palettes" window, these map to Palettes 5 to 8.
+#####NOTE:	As of 3.0.3, there seems to be a bug where
+			Palette 7 (PAL2) is ignored, and GB Studio
+			sends a default palette instead.
+			Workaround: 01h PAL23 or VM_LOAD_PALETTE
+	 
+	 We can set palettes for every block type (#4) with the relevant bit:
+	 ((1 << 0) | (2 << 1) | (0 << 2))
+	     #A         #B         #C
+		A: 1 (PAL1) Inside block
+		B: 2 (PAL2) Block's border
+		C: 0 (PAL0) Outside block
+#####TODO: Haven't fully tested this yet
+	
+	 Here, we only need to set a palette for inside the block, as it's
+	 the only region we enabled in #4. We've set this to PAL1 (1).
+ #6: Top-left corner of block: X Position.
+ #7: Top-left corner of block: Y Position.
+ #8: Bottom-right corner of block: X Position.
+ #9: Bottom-right corner of block: Y Position.
+#10: This is the start of Data Set #2.
+     This data set reads as follows:
+	 #10: Change palette inside block: Enabled
+	 #11: Palette for inside block: PAL2
+	 #12: Top-left X: 2
+	 #13: Top-left Y: 6
+	 #14: Bottom-right X: 17
+	 #15: Bottom-right Y: 8
+#16: There is no more data, so the rest of the packet is padded with 0's.
+
 
 VM_SGB_TRANSFER
-.db ((0x04 << 3) | 2), 5, 0x01, 0x01, 2, 3, 17, 5, 0x01, 0x02, 2, 6, 17, 8, 0x01, 0x03 ; five palettes over two packets
-.db 0, 11, 19, 15, 0x01, 0x02, 0, 16, 19, 17, 0x01, 0x01, 8, 6, 8, 6
+.db ((0x04 << 3) | 2), 3, 0x01, 1, 10, 2, 17, 7, 0x01, 2, 2, 10, 9, 15, 0x01, 3 ; three palettes over two packets
+.db 10, 10, 17, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ; Lots of 0's to pad the packet thanks to the third palette.
 
 VM_SGB_TRANSFER
-.db ((0x04 << 3) | 2), 3, 0x01, 0x01, 10, 2, 17, 7, 0x01, 0x02, 2, 10, 9, 15, 0x01, 0x03 ; three palettes over two packets
-.db 10, 10, 17, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+.db ((0x04 << 3) | 2), 5, 0x01, 1, 2, 3, 17, 5, 0x01, 2, 2, 6, 17, 8, 0x01, 3 ; five palettes over two packets
+.db 0, 11, 19, 15, 0x01, 1, 0, 16, 19, 17, 0x01, 2, 8, 6, 8, 6 ; We've filled both packets, so no padding is needed
+
+
+
+
+05h ATTR_LIN
+~~~~~~~~~~~~
+https://gbdev.io/pandocs/SGB_Command_Attribute.html#sgb-command-05h---attr_lin
+
+VM_SGB_TRANSFER
+.db ((0x05 << 3) | 1), 2, ((3 << 0) | (1 << 5) | (0 << 7)), ((11 << 0) | (2 << 5) | (1 << 7)), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ; ATTR_LIN
+        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+
+ #1: 05h - ATTR_LIN
+	 Apply a palette to an entire column or row of tiles
+ #2: Length, number of .db packets. Here, we're only sending one packet.
+ #3: Number of data sets, ie; How many palette regions are we setting
+	 in a single SGB transfer command?
+	 Here, we've set two palette regions.
+ #4: This is the start of Data Set #1.
+	 All data for one set is contained in a single byte, using bits.
+	 Bits 0 - 4 are reserved for the X *or* Y position of the line,
+	 for Vertical or Horizontal lines respectively. See #6.
+	 We only need to use Bit 0, as we can use numbers 0 - 20.
+	 Here, position is set to X 3.
+ #5: Bits 5 - 6 are reserved for palette number 0 - 3.
+	 We only need to use Bit 5.
+	 Here, we've set PAL1.
+ #6: This sets whether the line is Vertical (0) or Horizontal (1).
+	 Here, we're creating a Vertical line, so #4 will set the X position.
+ #7: This is the start of Data Set #2.
+	 Everything from #4 to #6 applies here too, as for each data set.
+	 This data set reads as follows:
+	 #7: Position is Y 11
+	 #8: Palette: PAL2
+	 #9: Horizontal line, so #7 sets Y position.
+#10: There is no more data, so the rest of the packet is padded with 0's.
+
+
+
+
+06h ATTR_DIV
+~~~~~~~~~~~~
+https://gbdev.io/pandocs/SGB_Command_Attribute.html#sgb-command-06h---attr_div
+
+VM_SGB_TRANSFER
+.db ((0x06 << 3) | 1), ; ATTR_DIV
+        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+
+ #1: 06h - ATTR_DIV
+ #2: 
+ #3: 
+ #4: 
+ #5: 
+ #6: 
+ #7: 
+ #8: 
+ #9: 
+#10: 
+
+
+
+
+07h ATTR_CHR
+~~~~~~~~~~~~
+https://gbdev.io/pandocs/SGB_Command_Attribute.html#sgb-command-07h---attr_chr
+
+VM_SGB_TRANSFER
+.db ((0x07 << 3) | 1), ; ATTR_CHR
+        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+
+ #1: 07h - ATTR_CHR
+ #2: 
+ #3: 
+ #4: 
+ #5: 
+ #6: 
+ #7: 
+ #8: 
+ #9: 
+#10: 
+
+
+
+
+08h SOUND
+~~~~~~~~~~~~
+https://gbdev.io/pandocs/SGB_Command_Sound.html#sgb-command-08h---sound
+
+VM_SGB_TRANSFER
+.db ((0x08 << 3) | 1), ; SOUND
+        #1         #2  #3     #4          #5          #6         #7         #8         #9     #10
+
+ #1: 08h - SOUND
+ #2: 
+ #3: 
+ #4: 
+ #5: 
+ #6: 
+ #7: 
+ #8: 
+ #9: 
+#10: 
