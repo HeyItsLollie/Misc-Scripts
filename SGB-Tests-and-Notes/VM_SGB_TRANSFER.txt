@@ -7,6 +7,12 @@ https://gbdev.io/pandocs/SGB_Command_Summary.html
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 https://gbdev.io/pandocs/SGB_Command_Pallete.html#sgb-command-00h---pal01
 
+Note:
+	VM_SGB_TRANSFER is a hassle to use, only use it if you have no other option.
+	For a far simpler alternative, skip to Line 126: VM_LOAD_PALETTE
+	
+	Information for VM_SGB_TRANSFER follows below, as it is useful for completeness' sake.
+
 VM_SGB_TRANSFER
 .db ((0x00 << 3) | 1), 0xFF, 0x7F, 0x1F, 0x04, 0xE0, 0x07, 0x00, 0x7C, 0, 0, 0, 0, 0, 0, 0 ; PAL01 packet
 ;      #1         #2      ^ #3 ^      ^ #4 ^      ^ #5 ^      ^ #6 ^    #7    #8    #9  #10
@@ -73,6 +79,7 @@ Green:
 		HEX	: 00 / 20 / 40 / 60 / 80 / A0 / C0 / E0
 Blue: n/a
 
+
 BYTE 2 of 2
 Red: n/a
 Green:
@@ -90,24 +97,24 @@ Blue:
 
 Red is stored exclusively in Byte 1. Its values are a 1:1 translation
 from decimal to hex. It loops to R0 at 20h.
-Red shares Byte 1 with Green.
+		Red shares Byte 1 with Green.
 				00h = R0, 01h = R1, 02h = R2, 03h = R3
 				04h = R4, 05h = R5, 06h = R6, 07h = R7
 
 Green is spread across both bytes. It's a bit of a mess.
 Byte 1, Bit 1 = G increments by 1 every 20h, from 0 - 7.
-                Green shares a byte with Red.
+                Green shares Byte 1 with Red.
 				00h = G0, 20h = G1, 40h = G2, 60h = G3
 				80h = G4, A0h = G5, C0h = G6, E0h = G7
 				
 Byte 2: Bit 2 = Every 1h, G increments by 8, from 0 - 24.
-                Green loops to G0 at 4h, and shares a byte with Blue.
+                Green loops to G0 at 4h, and shares Byte 2 with Blue.
 				00h = G0, 01h = G8, 02h = G16, 03h = G24
 				04h = G0, 05h = G8, 06h = G16, 07h = G24
 				etc
 
 Blue is stored exclusively in Byte 2.
-B increments by 1 every 04h, and loops to B0 at 80h.
+Blue increments by 1 every 04h, and loops to B0 at 80h.
 Blue shares Byte 2 with Green.
 				00h = B0, 04h = B1, 08h = B2, 0Ch = B3
 				10h = B4, 14h = B5, 18h = B6, 1Ch = B7
@@ -116,7 +123,7 @@ Blue shares Byte 2 with Green.
 
 
 
-VM_LOAD PALETTE
+VM_LOAD_PALETTE
 ~~~~~~~~~~~~~~~
 As we can see, the PALxy commands are kind of a hassle to set up.
 Thankfully, there's a far more user-friendly option for GBVM.
@@ -137,14 +144,21 @@ each group of 3 numbers is R, G, B - 4 groups for 4 colors in the palette
 next .CGB_PAL row goes.
 ~~~
 
-So if I wanted to only change the third SGB palette, and set it to
+Note: The bitmask is ordered from largest to smallest.
+
+Palette 1: 0b00010000
+Palette 2: 0b00100000
+Palette 3: 0b01000000
+Palette 4: 0b10000000
+
+So, if I wanted to only change the third SGB palette, and set it to
 a palette with the colors White, Red, Green, and Blue, I would use
 the following code as a GBVM script:
 
-                          4321
-						  vvvv
+
 VM_LOAD_PALETTE         0b01000000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
 .CGB_PAL 31,31,31 31,0,0 0,31,0 0,0,31
+
 
 Way, way easier.
 
