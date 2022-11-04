@@ -14,14 +14,21 @@ each group of 3 numbers is R, G, B - 4 groups for 4 colors in the palette
 next .CGB_PAL row goes.
 ~~~
 
-So if I wanted to only change the third SGB palette, and set it to
+Note: The bitmask is ordered from largest to smallest.
+
+Palette 1: 0b00010000
+Palette 2: 0b00100000
+Palette 3: 0b01000000
+Palette 4: 0b10000000
+
+So, if I wanted to only change the third SGB palette, and set it to
 a palette with the colors White, Red, Green, and Blue, I would use
 the following code as a GBVM script:
 
-                          4321
-						  vvvv
+
 VM_LOAD_PALETTE         0b01000000, ^/.PALETTE_COMMIT | .PALETTE_BKG/
 .CGB_PAL 31,31,31 31,0,0 0,31,0 0,0,31
+
 
 Way, way easier.
 
